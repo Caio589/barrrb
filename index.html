@@ -124,6 +124,8 @@ th,td{
   <h2>Planos</h2>
   <input id="nomePlano" placeholder="Nome do plano">
   <input type="number" id="valorPlano" placeholder="Valor mensal">
+  <input type="number" id="qtdPlano" placeholder="Qtd de procedimentos">
+  <input id="tipoPlano" placeholder="Tipo do serviço (ex: Corte)">
   <button onclick="salvarPlano()">Salvar Plano</button>
   <ul id="listaPlanos"></ul>
 </div>
@@ -198,8 +200,10 @@ function render(){
     db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
   carrinhoRender();
-  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} (${c.plano||"sem plano"})</li>`).join("");
-  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+  listaClientes.innerHTML=db.clientes.map(c =>
+    `<li>${c.nome} | Plano: ${c.plano || "Nenhum"} | Saldo: ${c.saldoPlano || 0}</li>`
+  ).join("");
+  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd}x ${p.tipo})</li>`).join("");
   listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
   listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
   listaHistorico.innerHTML=db.vendas.map(v=>`<li>${v.data} - R$ ${v.total}</li>`).join("");
@@ -213,7 +217,6 @@ function carrinhoRender(){
     html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
     soma+=i.valor;
   });
-  carrinho.innerHTML=html;
   document.getElementById("carrinho").innerHTML=html;
   total.innerText=soma.toFixed(2);
 }
@@ -221,9 +224,14 @@ function carrinhoRender(){
 function addCarrinho(){
   const [nome,valor,tipo]=produto.value.split("|");
   const cli=db.clientes.find(c=>c.nome===cliente.value);
+
   if(cli && cli.plano && tipo==="servico"){
-    alert("Cliente com plano: serviço não entra no caixa");
-    return;
+    if(cli.saldoPlano>0 && nome.toLowerCase().includes(cli.tipoPlano.toLowerCase())){
+      cli.saldoPlano--;
+      alert("Plano utilizado. Saldo restante: "+cli.saldoPlano);
+      save(); render();
+      return;
+    }
   }
   carrinho.push({nome,valor:Number(valor)});
   carrinhoRender();
@@ -238,17 +246,35 @@ function finalizarVenda(){
 }
 
 function salvarCliente(){
-  db.clientes.push({nome:nomeCliente.value,plano:planoCliente.value});
+  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  db.clientes.push({
+    nome:nomeCliente.value,
+    plano:plano?plano.nome:null,
+    saldoPlano:plano?plano.qtd:0,
+    tipoPlano:plano?plano.tipo:null
+  });
   save(); render();
 }
+
 function salvarPlano(){
-  db.planos.push({nome:nomePlano.value,valor:Number(valorPlano.value)});
+  db.planos.push({
+    nome:nomePlano.value,
+    valor:Number(valorPlano.value),
+    qtd:Number(qtdPlano.value),
+    tipo:tipoPlano.value
+  });
   save(); render();
 }
+
 function salvarProduto(){
-  db.produtos.push({nome:nomeProd.value,valor:Number(valorProd.value),tipo:tipoProd.value});
+  db.produtos.push({
+    nome:nomeProd.value,
+    valor:Number(valorProd.value),
+    tipo:tipoProd.value
+  });
   save(); render();
 }
+
 function salvarAgenda(){
   db.agenda.push({
     data:dataAgenda.value,
@@ -259,23 +285,15 @@ function salvarAgenda(){
   save(); render();
 }
 
-function abrirCaixa(){
-  db.caixa.aberto=true;
-  save(); render();
-}
-function fecharCaixa(){
-  db.caixa.aberto=false;
-  save(); render();
-}
+function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
+function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
 
 function filtrarClientes(txt){
-  cliente.innerHTML=db.clientes
-    .filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
+  cliente.innerHTML=db.clientes.filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
     .map(c=>`<option>${c.nome}</option>`).join("");
 }
 function filtrarProdutos(txt){
-  produto.innerHTML=db.produtos
-    .filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
+  produto.innerHTML=db.produtos.filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
     .map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
 }
 
@@ -284,10 +302,7 @@ function pdfVendas(){
   const pdf=new jsPDF();
   pdf.text("RELATÓRIO DE VENDAS",10,10);
   let y=20;
-  db.vendas.forEach(v=>{
-    pdf.text(`${v.data} - R$ ${v.total}`,10,y);
-    y+=7;
-  });
+  db.vendas.forEach(v=>{ pdf.text(`${v.data} - R$ ${v.total}`,10,y); y+=7; });
   pdf.save("vendas.pdf");
 }
 function pdfAgenda(){
@@ -295,15 +310,10 @@ function pdfAgenda(){
   const pdf=new jsPDF();
   pdf.text("AGENDA",10,10);
   let y=20;
-  db.agenda.forEach(a=>{
-    pdf.text(`${a.data} ${a.hora} - ${a.cliente}`,10,y);
-    y+=7;
-  });
+  db.agenda.forEach(a=>{ pdf.text(`${a.data} ${a.hora} - ${a.cliente}`,10,y); y+=7; });
   pdf.save("agenda.pdf");
 }
-function pdfHistorico(){
-  pdfVendas();
-}
+function pdfHistorico(){ pdfVendas(); }
 
 render();
 </script>
