@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>PDV Barbearia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
+  background-size:cover;
+  background-position:center;
+}
+.overlay{
+  background:rgba(0,0,0,.82);
+  min-height:100vh;
+  padding:20px;
+}
+.app{
+  max-width:1200px;
+  margin:auto;
+  background:#1e1e1e;
+  color:#fff;
+  border-radius:18px;
+  padding:20px;
+}
+h2{color:#f1c40f;margin:10px 0}
+.menu{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+.menu button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#333;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+}
+.menu button.active{
+  background:#f1c40f;
+  color:#000;
+}
+.section{display:none}
+.section.active{display:block}
+
+input,select,button{
+  padding:10px;
+  border-radius:6px;
+  border:none;
+}
+button{cursor:pointer;font-weight:bold}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+.box{
+  background:#111;
+  padding:15px;
+  border-radius:12px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  border-bottom:1px solid #333;
+  padding:6px;
+}
+.total{
+  font-size:26px;
+  font-weight:bold;
+  color:#2ecc71;
+  margin-top:10px;
+}
+.search{
+  width:100%;
+  margin-bottom:8px;
+}
+.actions button{
+  width:100%;
+  margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+<div class="overlay">
+<div class="app">
+
+<!-- MENU -->
+<div class="menu">
+  <button class="active" onclick="show('pdv',this)">💈 PDV</button>
+  <button onclick="show('clientes',this)">👤 Clientes</button>
+  <button onclick="show('produtos',this)">✂️ Produtos</button>
+  <button onclick="show('planos',this)">💳 Planos</button>
+</div>
+
+<!-- PDV -->
+<div id="pdv" class="section active">
+  <h2>PDV - Caixa</h2>
+
+  <div class="grid">
+    <div class="box">
+      <input class="search" placeholder="🔍 Pesquisar cliente" onkeyup="filtrarClientes(this.value)">
+      <select id="cliente"></select>
+
+      <input class="search" placeholder="🔍 Pesquisar produto/serviço" onkeyup="filtrarProdutos(this.value)">
+      <select id="produto"></select>
+
+      <button onclick="addItem()">➕ Adicionar ao carrinho</button>
+    </div>
+
+    <div class="box">
+      <table id="carrinho">
+        <tr><th>Item</th><th>Valor</th></tr>
+      </table>
+
+      <div class="total">Total: R$ <span id="total">0.00</span></div>
+
+      <div class="actions">
+        <button style="background:#2ecc71;color:#000" onclick="finalizarVenda()">💾 Finalizar Venda</button>
+        <button style="background:#3498db;color:#fff" onclick="pdfVenda()">📄 PDF da Venda</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENTES -->
+<div id="clientes" class="section">
+  <h2>Clientes</h2>
+  <input id="nomeCliente" placeholder="Nome do cliente">
+  <select id="planoCliente"></select>
+  <button onclick="salvarCliente()">Salvar Cliente</button>
+  <ul id="listaClientes"></ul>
+</div>
+
+<!-- PRODUTOS -->
+<div id="produtos" class="section">
+  <h2>Produtos / Serviços</h2>
+  <input id="nomeProduto" placeholder="Nome">
+  <input id="valorProduto" type="number" placeholder="Valor">
+  <select id="tipoProduto">
+    <option value="servico">Serviço</option>
+    <option value="produto">Produto</option>
+  </select>
+  <button onclick="salvarProduto()">Salvar</button>
+  <ul id="listaProdutos"></ul>
+</div>
+
+<!-- PLANOS -->
+<div id="planos" class="section">
+  <h2>Planos Mensais</h2>
+  <input id="nomePlano" placeholder="Nome do plano">
+  <input id="valorPlano" type="number" placeholder="Valor mensal">
+  <button onclick="salvarPlano()">Salvar Plano</button>
+  <ul id="listaPlanos"></ul>
+</div>
+
+</div>
+</div>
+
+<script>
+const db = {
+  clientes: JSON.parse(localStorage.getItem("clientes")) || [],
+  produtos: JSON.parse(localStorage.getItem("produtos")) || [],
+  planos: JSON.parse(localStorage.getItem("planos")) || []
+};
+
+let carrinho = [];
+
+function save(){
+  localStorage.setItem("clientes",JSON.stringify(db.clientes));
+  localStorage.setItem("produtos",JSON.stringify(db.produtos));
+  localStorage.setItem("planos",JSON.stringify(db.planos));
+}
+
+function show(id,btn){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".menu button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  render();
+}
+
+function render(){
+  cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+
+  planoCliente.innerHTML = `<option value="">Sem plano</option>` +
+    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+
+  listaClientes.innerHTML = db.clientes.map(c=>`<li>${c.nome} (${c.plano||"sem plano"})</li>`).join("");
+  listaProdutos.innerHTML = db.produtos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+  listaPlanos.innerHTML = db.planos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+
+  carrinhoRender();
+}
+
+function carrinhoRender(){
+  carrinhoTable = "<tr><th>Item</th><th>Valor</th></tr>";
+  let soma = 0;
+  carrinho.forEach(i=>{
+    carrinhoTable += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma += i.valor;
+  });
+  carrinho.innerHTML = carrinhoTable;
+  document.getElementById("carrinho").innerHTML = carrinhoTable;
+  total.innerText = soma.toFixed(2);
+}
+
+function addItem(){
+  const [nome,valor,tipo] = produto.value.split("|");
+  const cli = db.clientes.find(c=>c.nome===cliente.value);
+
+  if(cli && cli.plano && tipo==="servico"){
+    alert("Cliente com plano: serviço não entra no caixa");
+    return;
+  }
+
+  carrinho.push({nome, valor:Number(valor)});
+  carrinhoRender();
+}
+
+function finalizarVenda(){
+  carrinho = [];
+  carrinhoRender();
+  alert("✅ Venda finalizada");
+}
+
+function pdfVenda(){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  pdf.setFontSize(16);
+  pdf.text("RELATÓRIO DE VENDA - BARBEARIA",10,15);
+
+  pdf.setFontSize(11);
+  pdf.text("Cliente: "+cliente.value,10,25);
+  pdf.text("Data: "+new Date().toLocaleString("pt-BR"),10,32);
+
+  let y=45;
+  carrinho.forEach(i=>{
+    pdf.text(`${i.nome} - R$ ${i.valor.toFixed(2)}`,10,y);
+    y+=7;
+  });
+
+  pdf.setFontSize(14);
+  pdf.text("TOTAL: R$ "+total.innerText,10,y+10);
+
+  pdf.save("venda-barbearia.pdf");
+}
+
+function salvarCliente(){
+  db.clientes.push({nome:nomeCliente.value,plano:planoCliente.value});
+  save(); render();
+}
+
+function salvarProduto(){
+  db.produtos.push({nome:nomeProduto.value,valor:Number(valorProduto.value),tipo:tipoProduto.value});
+  save(); render();
+}
+
+function salvarPlano(){
+  db.planos.push({nome:nomePlano.value,valor:Number(valorPlano.value)});
+  save(); render();
+}
+
+function filtrarClientes(txt){
+  cliente.innerHTML = db.clientes
+    .filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
+    .map(c=>`<option>${c.nome}</option>`).join("");
+}
+
+function filtrarProdutos(txt){
+  produto.innerHTML = db.produtos
+    .filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
+    .map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+}
+
+render();
+</script>
+
+</body>
+</html>
