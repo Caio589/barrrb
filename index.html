@@ -39,9 +39,6 @@ body{
   margin:15px 0;
   cursor:pointer;
 }
-.menu button:hover{
-  transform:scale(1.2);
-}
 .content{
   margin-left:90px;
   padding:20px;
@@ -54,6 +51,7 @@ input,select,button{
   padding:10px;
   border-radius:6px;
   border:none;
+  margin:4px 0;
 }
 button{cursor:pointer;font-weight:bold}
 
@@ -71,15 +69,20 @@ th,td{
   color:#2ecc71;
   margin-top:10px;
 }
+.search{
+  width:100%;
+}
 </style>
 </head>
 
 <body>
 <div class="overlay">
 
-<!-- MENU TRANSPARENTE -->
+<!-- MENU -->
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
+  <button onclick="show('clientes')">👤</button>
+  <button onclick="show('planos')">💳</button>
   <button onclick="show('agenda')">📅</button>
   <button onclick="show('estoque')">📦</button>
   <button onclick="show('historico')">📊</button>
@@ -91,14 +94,38 @@ th,td{
 <!-- PDV -->
 <div id="pdv" class="section active">
   <h2>PDV</h2>
+
+  <input class="search" placeholder="🔍 Pesquisar cliente" onkeyup="filtrarClientes(this.value)">
   <select id="cliente"></select>
+
+  <input class="search" placeholder="🔍 Pesquisar produto/serviço" onkeyup="filtrarProdutos(this.value)">
   <select id="produto"></select>
+
   <button onclick="addCarrinho()">Adicionar</button>
 
   <table id="carrinho"></table>
   <div class="total">Total: R$ <span id="total">0.00</span></div>
 
   <button onclick="finalizarVenda()">Finalizar Venda</button>
+  <button onclick="pdfVendas()">📄 PDF Vendas</button>
+</div>
+
+<!-- CLIENTES -->
+<div id="clientes" class="section">
+  <h2>Clientes</h2>
+  <input id="nomeCliente" placeholder="Nome do cliente">
+  <select id="planoCliente"></select>
+  <button onclick="salvarCliente()">Salvar Cliente</button>
+  <ul id="listaClientes"></ul>
+</div>
+
+<!-- PLANOS -->
+<div id="planos" class="section">
+  <h2>Planos</h2>
+  <input id="nomePlano" placeholder="Nome do plano">
+  <input type="number" id="valorPlano" placeholder="Valor mensal">
+  <button onclick="salvarPlano()">Salvar Plano</button>
+  <ul id="listaPlanos"></ul>
 </div>
 
 <!-- AGENDA -->
@@ -106,18 +133,22 @@ th,td{
   <h2>Agenda</h2>
   <input type="date" id="dataAgenda">
   <input type="time" id="horaAgenda">
-  <input placeholder="Cliente" id="clienteAgenda">
-  <input placeholder="Serviço" id="servicoAgenda">
-  <button onclick="salvarAgenda()">Salvar Horário</button>
+  <input id="clienteAgenda" placeholder="Cliente">
+  <input id="servicoAgenda" placeholder="Serviço">
+  <button onclick="salvarAgenda()">Salvar</button>
+  <button onclick="pdfAgenda()">📄 PDF Agenda</button>
   <ul id="listaAgenda"></ul>
 </div>
 
 <!-- ESTOQUE -->
 <div id="estoque" class="section">
-  <h2>Estoque</h2>
-  <input placeholder="Produto" id="nomeProd">
-  <input type="number" placeholder="Valor" id="valorProd">
-  <input type="number" placeholder="Qtd" id="qtdProd">
+  <h2>Produtos / Serviços</h2>
+  <input id="nomeProd" placeholder="Nome">
+  <input type="number" id="valorProd" placeholder="Valor">
+  <select id="tipoProd">
+    <option value="servico">Serviço</option>
+    <option value="produto">Produto</option>
+  </select>
   <button onclick="salvarProduto()">Salvar</button>
   <ul id="listaEstoque"></ul>
 </div>
@@ -125,13 +156,14 @@ th,td{
 <!-- HISTÓRICO -->
 <div id="historico" class="section">
   <h2>Histórico de Vendas</h2>
+  <button onclick="pdfHistorico()">📄 PDF Histórico</button>
   <ul id="listaHistorico"></ul>
 </div>
 
 <!-- CAIXA -->
 <div id="caixa" class="section">
   <h2>Caixa</h2>
-  <p id="statusCaixa">Caixa fechado</p>
+  <p id="statusCaixa"></p>
   <button onclick="abrirCaixa()">Abrir Caixa</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
 </div>
@@ -141,11 +173,12 @@ th,td{
 
 <script>
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:["Cliente Padrão"],
+  clientes:[],
+  planos:[],
   produtos:[],
-  agenda:[],
   vendas:[],
-  caixa:{aberto:false, abertura:0}
+  agenda:[],
+  caixa:{aberto:false}
 };
 
 let carrinho=[];
@@ -159,25 +192,41 @@ function show(id){
 }
 
 function render(){
-  cliente.innerHTML=db.clientes.map(c=>`<option>${c}</option>`).join("");
-  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}</option>`).join("");
+  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+
+    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  carrinho.innerHTML="<tr><th>Item</th><th>Valor</th></tr>"+
-    carrinho.map(i=>`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`).join("");
-
-  total.innerText=carrinho.reduce((s,i)=>s+i.valor,0).toFixed(2);
-
+  carrinhoRender();
+  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} (${c.plano||"sem plano"})</li>`).join("");
+  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+  listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
   listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
-  listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.qtd})</li>`).join("");
   listaHistorico.innerHTML=db.vendas.map(v=>`<li>${v.data} - R$ ${v.total}</li>`).join("");
-
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
 }
 
+function carrinhoRender(){
+  let html="<tr><th>Item</th><th>Valor</th></tr>";
+  let soma=0;
+  carrinho.forEach(i=>{
+    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma+=i.valor;
+  });
+  carrinho.innerHTML=html;
+  document.getElementById("carrinho").innerHTML=html;
+  total.innerText=soma.toFixed(2);
+}
+
 function addCarrinho(){
-  const [nome,valor]=produto.value.split("|");
+  const [nome,valor,tipo]=produto.value.split("|");
+  const cli=db.clientes.find(c=>c.nome===cliente.value);
+  if(cli && cli.plano && tipo==="servico"){
+    alert("Cliente com plano: serviço não entra no caixa");
+    return;
+  }
   carrinho.push({nome,valor:Number(valor)});
-  render();
+  carrinhoRender();
 }
 
 function finalizarVenda(){
@@ -188,6 +237,18 @@ function finalizarVenda(){
   save(); render();
 }
 
+function salvarCliente(){
+  db.clientes.push({nome:nomeCliente.value,plano:planoCliente.value});
+  save(); render();
+}
+function salvarPlano(){
+  db.planos.push({nome:nomePlano.value,valor:Number(valorPlano.value)});
+  save(); render();
+}
+function salvarProduto(){
+  db.produtos.push({nome:nomeProd.value,valor:Number(valorProd.value),tipo:tipoProd.value});
+  save(); render();
+}
 function salvarAgenda(){
   db.agenda.push({
     data:dataAgenda.value,
@@ -198,25 +259,50 @@ function salvarAgenda(){
   save(); render();
 }
 
-function salvarProduto(){
-  db.produtos.push({
-    nome:nomeProd.value,
-    valor:Number(valorProd.value),
-    qtd:Number(qtdProd.value)
-  });
-  save(); render();
-}
-
 function abrirCaixa(){
-  const v=Number(prompt("Valor de abertura"));
-  if(isNaN(v)) return;
-  db.caixa={aberto:true, abertura:v};
+  db.caixa.aberto=true;
+  save(); render();
+}
+function fecharCaixa(){
+  db.caixa.aberto=false;
   save(); render();
 }
 
-function fecharCaixa(){
-  db.caixa={aberto:false, abertura:0};
-  save(); render();
+function filtrarClientes(txt){
+  cliente.innerHTML=db.clientes
+    .filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
+    .map(c=>`<option>${c.nome}</option>`).join("");
+}
+function filtrarProdutos(txt){
+  produto.innerHTML=db.produtos
+    .filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
+    .map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+}
+
+function pdfVendas(){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF();
+  pdf.text("RELATÓRIO DE VENDAS",10,10);
+  let y=20;
+  db.vendas.forEach(v=>{
+    pdf.text(`${v.data} - R$ ${v.total}`,10,y);
+    y+=7;
+  });
+  pdf.save("vendas.pdf");
+}
+function pdfAgenda(){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF();
+  pdf.text("AGENDA",10,10);
+  let y=20;
+  db.agenda.forEach(a=>{
+    pdf.text(`${a.data} ${a.hora} - ${a.cliente}`,10,y);
+    y+=7;
+  });
+  pdf.save("agenda.pdf");
+}
+function pdfHistorico(){
+  pdfVendas();
 }
 
 render();
