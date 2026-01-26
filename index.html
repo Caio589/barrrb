@@ -16,38 +16,36 @@ body{
   background-position:center;
 }
 .overlay{
-  background:rgba(0,0,0,.82);
+  background:rgba(0,0,0,.65);
   min-height:100vh;
-  padding:20px;
 }
-.app{
-  max-width:1200px;
-  margin:auto;
-  background:#1e1e1e;
-  color:#fff;
-  border-radius:18px;
-  padding:20px;
-}
-h2{color:#f1c40f;margin:10px 0}
 .menu{
+  position:fixed;
+  left:0;
+  top:0;
+  bottom:0;
+  width:70px;
+  background:rgba(0,0,0,.35);
   display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-bottom:15px;
+  flex-direction:column;
+  align-items:center;
+  padding-top:20px;
 }
 .menu button{
-  flex:1;
-  padding:12px;
+  background:none;
   border:none;
-  border-radius:8px;
-  background:#333;
-  color:#fff;
-  font-weight:bold;
+  color:#f1c40f;
+  font-size:22px;
+  margin:15px 0;
   cursor:pointer;
 }
-.menu button.active{
-  background:#f1c40f;
-  color:#000;
+.menu button:hover{
+  transform:scale(1.2);
+}
+.content{
+  margin-left:90px;
+  padding:20px;
+  color:#fff;
 }
 .section{display:none}
 .section.active{display:block}
@@ -59,233 +57,166 @@ input,select,button{
 }
 button{cursor:pointer;font-weight:bold}
 
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:20px;
-}
-.box{
-  background:#111;
-  padding:15px;
-  border-radius:12px;
-}
 table{
   width:100%;
   border-collapse:collapse;
 }
 th,td{
-  border-bottom:1px solid #333;
+  border-bottom:1px solid rgba(255,255,255,.2);
   padding:6px;
 }
+
 .total{
-  font-size:26px;
-  font-weight:bold;
+  font-size:24px;
   color:#2ecc71;
   margin-top:10px;
-}
-.search{
-  width:100%;
-  margin-bottom:8px;
-}
-.actions button{
-  width:100%;
-  margin-top:8px;
 }
 </style>
 </head>
 
 <body>
 <div class="overlay">
-<div class="app">
 
-<!-- MENU -->
+<!-- MENU TRANSPARENTE -->
 <div class="menu">
-  <button class="active" onclick="show('pdv',this)">💈 PDV</button>
-  <button onclick="show('clientes',this)">👤 Clientes</button>
-  <button onclick="show('produtos',this)">✂️ Produtos</button>
-  <button onclick="show('planos',this)">💳 Planos</button>
+  <button onclick="show('pdv')">💈</button>
+  <button onclick="show('agenda')">📅</button>
+  <button onclick="show('estoque')">📦</button>
+  <button onclick="show('historico')">📊</button>
+  <button onclick="show('caixa')">💰</button>
 </div>
+
+<div class="content">
 
 <!-- PDV -->
 <div id="pdv" class="section active">
-  <h2>PDV - Caixa</h2>
+  <h2>PDV</h2>
+  <select id="cliente"></select>
+  <select id="produto"></select>
+  <button onclick="addCarrinho()">Adicionar</button>
 
-  <div class="grid">
-    <div class="box">
-      <input class="search" placeholder="🔍 Pesquisar cliente" onkeyup="filtrarClientes(this.value)">
-      <select id="cliente"></select>
+  <table id="carrinho"></table>
+  <div class="total">Total: R$ <span id="total">0.00</span></div>
 
-      <input class="search" placeholder="🔍 Pesquisar produto/serviço" onkeyup="filtrarProdutos(this.value)">
-      <select id="produto"></select>
-
-      <button onclick="addItem()">➕ Adicionar ao carrinho</button>
-    </div>
-
-    <div class="box">
-      <table id="carrinho">
-        <tr><th>Item</th><th>Valor</th></tr>
-      </table>
-
-      <div class="total">Total: R$ <span id="total">0.00</span></div>
-
-      <div class="actions">
-        <button style="background:#2ecc71;color:#000" onclick="finalizarVenda()">💾 Finalizar Venda</button>
-        <button style="background:#3498db;color:#fff" onclick="pdfVenda()">📄 PDF da Venda</button>
-      </div>
-    </div>
-  </div>
+  <button onclick="finalizarVenda()">Finalizar Venda</button>
 </div>
 
-<!-- CLIENTES -->
-<div id="clientes" class="section">
-  <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome do cliente">
-  <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">Salvar Cliente</button>
-  <ul id="listaClientes"></ul>
+<!-- AGENDA -->
+<div id="agenda" class="section">
+  <h2>Agenda</h2>
+  <input type="date" id="dataAgenda">
+  <input type="time" id="horaAgenda">
+  <input placeholder="Cliente" id="clienteAgenda">
+  <input placeholder="Serviço" id="servicoAgenda">
+  <button onclick="salvarAgenda()">Salvar Horário</button>
+  <ul id="listaAgenda"></ul>
 </div>
 
-<!-- PRODUTOS -->
-<div id="produtos" class="section">
-  <h2>Produtos / Serviços</h2>
-  <input id="nomeProduto" placeholder="Nome">
-  <input id="valorProduto" type="number" placeholder="Valor">
-  <select id="tipoProduto">
-    <option value="servico">Serviço</option>
-    <option value="produto">Produto</option>
-  </select>
+<!-- ESTOQUE -->
+<div id="estoque" class="section">
+  <h2>Estoque</h2>
+  <input placeholder="Produto" id="nomeProd">
+  <input type="number" placeholder="Valor" id="valorProd">
+  <input type="number" placeholder="Qtd" id="qtdProd">
   <button onclick="salvarProduto()">Salvar</button>
-  <ul id="listaProdutos"></ul>
+  <ul id="listaEstoque"></ul>
 </div>
 
-<!-- PLANOS -->
-<div id="planos" class="section">
-  <h2>Planos Mensais</h2>
-  <input id="nomePlano" placeholder="Nome do plano">
-  <input id="valorPlano" type="number" placeholder="Valor mensal">
-  <button onclick="salvarPlano()">Salvar Plano</button>
-  <ul id="listaPlanos"></ul>
+<!-- HISTÓRICO -->
+<div id="historico" class="section">
+  <h2>Histórico de Vendas</h2>
+  <ul id="listaHistorico"></ul>
+</div>
+
+<!-- CAIXA -->
+<div id="caixa" class="section">
+  <h2>Caixa</h2>
+  <p id="statusCaixa">Caixa fechado</p>
+  <button onclick="abrirCaixa()">Abrir Caixa</button>
+  <button onclick="fecharCaixa()">Fechar Caixa</button>
 </div>
 
 </div>
 </div>
 
 <script>
-const db = {
-  clientes: JSON.parse(localStorage.getItem("clientes")) || [],
-  produtos: JSON.parse(localStorage.getItem("produtos")) || [],
-  planos: JSON.parse(localStorage.getItem("planos")) || []
+const db = JSON.parse(localStorage.getItem("db")) || {
+  clientes:["Cliente Padrão"],
+  produtos:[],
+  agenda:[],
+  vendas:[],
+  caixa:{aberto:false, abertura:0}
 };
 
-let carrinho = [];
+let carrinho=[];
 
-function save(){
-  localStorage.setItem("clientes",JSON.stringify(db.clientes));
-  localStorage.setItem("produtos",JSON.stringify(db.produtos));
-  localStorage.setItem("planos",JSON.stringify(db.planos));
-}
+function save(){ localStorage.setItem("db",JSON.stringify(db)); }
 
-function show(id,btn){
+function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  document.querySelectorAll(".menu button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
   render();
 }
 
 function render(){
-  cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+  cliente.innerHTML=db.clientes.map(c=>`<option>${c}</option>`).join("");
+  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}</option>`).join("");
 
-  planoCliente.innerHTML = `<option value="">Sem plano</option>` +
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  carrinho.innerHTML="<tr><th>Item</th><th>Valor</th></tr>"+
+    carrinho.map(i=>`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`).join("");
 
-  listaClientes.innerHTML = db.clientes.map(c=>`<li>${c.nome} (${c.plano||"sem plano"})</li>`).join("");
-  listaProdutos.innerHTML = db.produtos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
-  listaPlanos.innerHTML = db.planos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+  total.innerText=carrinho.reduce((s,i)=>s+i.valor,0).toFixed(2);
 
-  carrinhoRender();
+  listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
+  listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.qtd})</li>`).join("");
+  listaHistorico.innerHTML=db.vendas.map(v=>`<li>${v.data} - R$ ${v.total}</li>`).join("");
+
+  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
 }
 
-function carrinhoRender(){
-  carrinhoTable = "<tr><th>Item</th><th>Valor</th></tr>";
-  let soma = 0;
-  carrinho.forEach(i=>{
-    carrinhoTable += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    soma += i.valor;
-  });
-  carrinho.innerHTML = carrinhoTable;
-  document.getElementById("carrinho").innerHTML = carrinhoTable;
-  total.innerText = soma.toFixed(2);
-}
-
-function addItem(){
-  const [nome,valor,tipo] = produto.value.split("|");
-  const cli = db.clientes.find(c=>c.nome===cliente.value);
-
-  if(cli && cli.plano && tipo==="servico"){
-    alert("Cliente com plano: serviço não entra no caixa");
-    return;
-  }
-
-  carrinho.push({nome, valor:Number(valor)});
-  carrinhoRender();
+function addCarrinho(){
+  const [nome,valor]=produto.value.split("|");
+  carrinho.push({nome,valor:Number(valor)});
+  render();
 }
 
 function finalizarVenda(){
-  carrinho = [];
-  carrinhoRender();
-  alert("✅ Venda finalizada");
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({data:new Date().toLocaleString(),total:totalVenda});
+  carrinho=[];
+  save(); render();
 }
 
-function pdfVenda(){
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-
-  pdf.setFontSize(16);
-  pdf.text("RELATÓRIO DE VENDA - BARBEARIA",10,15);
-
-  pdf.setFontSize(11);
-  pdf.text("Cliente: "+cliente.value,10,25);
-  pdf.text("Data: "+new Date().toLocaleString("pt-BR"),10,32);
-
-  let y=45;
-  carrinho.forEach(i=>{
-    pdf.text(`${i.nome} - R$ ${i.valor.toFixed(2)}`,10,y);
-    y+=7;
+function salvarAgenda(){
+  db.agenda.push({
+    data:dataAgenda.value,
+    hora:horaAgenda.value,
+    cliente:clienteAgenda.value,
+    servico:servicoAgenda.value
   });
-
-  pdf.setFontSize(14);
-  pdf.text("TOTAL: R$ "+total.innerText,10,y+10);
-
-  pdf.save("venda-barbearia.pdf");
-}
-
-function salvarCliente(){
-  db.clientes.push({nome:nomeCliente.value,plano:planoCliente.value});
   save(); render();
 }
 
 function salvarProduto(){
-  db.produtos.push({nome:nomeProduto.value,valor:Number(valorProduto.value),tipo:tipoProduto.value});
+  db.produtos.push({
+    nome:nomeProd.value,
+    valor:Number(valorProd.value),
+    qtd:Number(qtdProd.value)
+  });
   save(); render();
 }
 
-function salvarPlano(){
-  db.planos.push({nome:nomePlano.value,valor:Number(valorPlano.value)});
+function abrirCaixa(){
+  const v=Number(prompt("Valor de abertura"));
+  if(isNaN(v)) return;
+  db.caixa={aberto:true, abertura:v};
   save(); render();
 }
 
-function filtrarClientes(txt){
-  cliente.innerHTML = db.clientes
-    .filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
-    .map(c=>`<option>${c.nome}</option>`).join("");
-}
-
-function filtrarProdutos(txt){
-  produto.innerHTML = db.produtos
-    .filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
-    .map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+function fecharCaixa(){
+  db.caixa={aberto:false, abertura:0};
+  save(); render();
 }
 
 render();
