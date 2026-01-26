@@ -15,63 +15,24 @@ body{
   background-size:cover;
   background-position:center;
 }
-.overlay{
-  background:rgba(0,0,0,.65);
-  min-height:100vh;
-}
+.overlay{background:rgba(0,0,0,.65);min-height:100vh;}
 .menu{
-  position:fixed;
-  left:0;
-  top:0;
-  bottom:0;
-  width:70px;
+  position:fixed;left:0;top:0;bottom:0;width:70px;
   background:rgba(0,0,0,.35);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding-top:20px;
+  display:flex;flex-direction:column;align-items:center;padding-top:20px;
 }
 .menu button{
-  background:none;
-  border:none;
-  color:#f1c40f;
-  font-size:22px;
-  margin:15px 0;
-  cursor:pointer;
+  background:none;border:none;color:#f1c40f;font-size:22px;
+  margin:15px 0;cursor:pointer;
 }
-.content{
-  margin-left:90px;
-  padding:20px;
-  color:#fff;
-}
-.section{display:none}
-.section.active{display:block}
-
-input,select,button{
-  padding:10px;
-  border-radius:6px;
-  border:none;
-  margin:4px 0;
-}
+.content{margin-left:90px;padding:20px;color:#fff;}
+.section{display:none}.section.active{display:block}
+input,select,button{padding:10px;border-radius:6px;border:none;margin:4px 0}
 button{cursor:pointer;font-weight:bold}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-th,td{
-  border-bottom:1px solid rgba(255,255,255,.2);
-  padding:6px;
-}
-
-.total{
-  font-size:24px;
-  color:#2ecc71;
-  margin-top:10px;
-}
-.search{
-  width:100%;
-}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
+.total{font-size:24px;color:#2ecc71;margin-top:10px}
+.search{width:100%}
 </style>
 </head>
 
@@ -85,8 +46,8 @@ th,td{
   <button onclick="show('planos')">💳</button>
   <button onclick="show('agenda')">📅</button>
   <button onclick="show('estoque')">📦</button>
+  <button onclick="show('despesas')">🧾</button>
   <button onclick="show('historico')">📊</button>
-  <button onclick="show('caixa')">💰</button>
 </div>
 
 <div class="content">
@@ -94,7 +55,6 @@ th,td{
 <!-- PDV -->
 <div id="pdv" class="section active">
   <h2>PDV</h2>
-
   <input class="search" placeholder="🔍 Pesquisar cliente" onkeyup="filtrarClientes(this.value)">
   <select id="cliente"></select>
 
@@ -102,12 +62,10 @@ th,td{
   <select id="produto"></select>
 
   <button onclick="addCarrinho()">Adicionar</button>
-
   <table id="carrinho"></table>
   <div class="total">Total: R$ <span id="total">0.00</span></div>
 
   <button onclick="finalizarVenda()">Finalizar Venda</button>
-  <button onclick="pdfVendas()">📄 PDF Vendas</button>
 </div>
 
 <!-- CLIENTES -->
@@ -138,7 +96,6 @@ th,td{
   <input id="clienteAgenda" placeholder="Cliente">
   <input id="servicoAgenda" placeholder="Serviço">
   <button onclick="salvarAgenda()">Salvar</button>
-  <button onclick="pdfAgenda()">📄 PDF Agenda</button>
   <ul id="listaAgenda"></ul>
 </div>
 
@@ -155,19 +112,21 @@ th,td{
   <ul id="listaEstoque"></ul>
 </div>
 
-<!-- HISTÓRICO -->
-<div id="historico" class="section">
-  <h2>Histórico de Vendas</h2>
-  <button onclick="pdfHistorico()">📄 PDF Histórico</button>
-  <ul id="listaHistorico"></ul>
+<!-- DESPESAS -->
+<div id="despesas" class="section">
+  <h2>Despesas</h2>
+  <input id="descDespesa" placeholder="Descrição (Aluguel, Funcionário)">
+  <input type="number" id="valorDespesa" placeholder="Valor">
+  <input type="date" id="dataDespesa">
+  <button onclick="salvarDespesa()">Salvar Despesa</button>
+  <ul id="listaDespesas"></ul>
 </div>
 
-<!-- CAIXA -->
-<div id="caixa" class="section">
-  <h2>Caixa</h2>
-  <p id="statusCaixa"></p>
-  <button onclick="abrirCaixa()">Abrir Caixa</button>
-  <button onclick="fecharCaixa()">Fechar Caixa</button>
+<!-- HISTÓRICO -->
+<div id="historico" class="section">
+  <h2>Financeiro</h2>
+  <button onclick="pdfComparativoMensal()">📊 PDF Comparativo Mensal</button>
+  <ul id="listaHistorico"></ul>
 </div>
 
 </div>
@@ -175,145 +134,82 @@ th,td{
 
 <script>
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[],
-  planos:[],
-  produtos:[],
-  vendas:[],
-  agenda:[],
-  caixa:{aberto:false}
+  clientes:[], planos:[], produtos:[], vendas:[], agenda:[], despesas:[]
 };
-
 let carrinho=[];
 
-function save(){ localStorage.setItem("db",JSON.stringify(db)); }
-
-function show(id){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  render();
-}
+function save(){localStorage.setItem("db",JSON.stringify(db));}
+function show(id){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
 
 function render(){
   cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
   produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
-  planoCliente.innerHTML=`<option value="">Sem plano</option>`+
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  carrinhoRender();
-  listaClientes.innerHTML=db.clientes.map(c =>
-    `<li>${c.nome} | Plano: ${c.plano || "Nenhum"} | Saldo: ${c.saldoPlano || 0}</li>`
-  ).join("");
-  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd}x ${p.tipo})</li>`).join("");
+  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} | Plano: ${c.plano||"Nenhum"} | Saldo: ${c.saldoPlano||0}</li>`).join("");
+  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd} ${p.tipo})</li>`).join("");
   listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
   listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
+  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.data} - ${d.descricao} R$ ${d.valor}</li>`).join("");
   listaHistorico.innerHTML=db.vendas.map(v=>`<li>${v.data} - R$ ${v.total}</li>`).join("");
-  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
+  carrinhoRender();
 }
 
 function carrinhoRender(){
-  let html="<tr><th>Item</th><th>Valor</th></tr>";
-  let soma=0;
-  carrinho.forEach(i=>{
-    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    soma+=i.valor;
-  });
-  document.getElementById("carrinho").innerHTML=html;
+  let html="<tr><th>Item</th><th>Valor</th></tr>"; let soma=0;
+  carrinho.forEach(i=>{html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;soma+=i.valor});
+  carrinho.innerHTML=html; document.getElementById("carrinho").innerHTML=html;
   total.innerText=soma.toFixed(2);
 }
 
 function addCarrinho(){
   const [nome,valor,tipo]=produto.value.split("|");
   const cli=db.clientes.find(c=>c.nome===cliente.value);
-
-  if(cli && cli.plano && tipo==="servico"){
-    if(cli.saldoPlano>0 && nome.toLowerCase().includes(cli.tipoPlano.toLowerCase())){
-      cli.saldoPlano--;
-      alert("Plano utilizado. Saldo restante: "+cli.saldoPlano);
-      save(); render();
-      return;
-    }
+  if(cli && cli.plano && tipo==="servico" && cli.saldoPlano>0 && nome.toLowerCase().includes(cli.tipoPlano.toLowerCase())){
+    cli.saldoPlano--; save(); render(); alert("Plano usado. Saldo: "+cli.saldoPlano); return;
   }
-  carrinho.push({nome,valor:Number(valor)});
-  carrinhoRender();
+  carrinho.push({nome,valor:Number(valor)}); carrinhoRender();
 }
 
 function finalizarVenda(){
-  if(!db.caixa.aberto) return alert("Abra o caixa");
   const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toLocaleString(),total:totalVenda});
-  carrinho=[];
-  save(); render();
+  db.vendas.push({data:new Date().toISOString(),total:totalVenda});
+  carrinho=[]; save(); render();
 }
 
 function salvarCliente(){
   const plano=db.planos.find(p=>p.nome===planoCliente.value);
-  db.clientes.push({
-    nome:nomeCliente.value,
-    plano:plano?plano.nome:null,
-    saldoPlano:plano?plano.qtd:0,
-    tipoPlano:plano?plano.tipo:null
-  });
+  db.clientes.push({nome:nomeCliente.value,plano:plano?plano.nome:null,saldoPlano:plano?plano.qtd:0,tipoPlano:plano?plano.tipo:null});
   save(); render();
 }
 
-function salvarPlano(){
-  db.planos.push({
-    nome:nomePlano.value,
-    valor:Number(valorPlano.value),
-    qtd:Number(qtdPlano.value),
-    tipo:tipoPlano.value
+function salvarPlano(){db.planos.push({nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value});save();render();}
+function salvarProduto(){db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value});save();render();}
+function salvarAgenda(){db.agenda.push({data:dataAgenda.value,hora:horaAgenda.value,cliente:clienteAgenda.value,servico:servicoAgenda.value});save();render();}
+function salvarDespesa(){db.despesas.push({descricao:descDespesa.value,valor:+valorDespesa.value,data:dataDespesa.value});save();render();}
+
+function compararMeses(){
+  const hoje=new Date(); let atual=0,anterior=0;
+  db.vendas.forEach(v=>{
+    const d=new Date(v.data);
+    if(d.getMonth()===hoje.getMonth()) atual+=v.total;
+    if(d.getMonth()===hoje.getMonth()-1) anterior+=v.total;
   });
-  save(); render();
+  return {atual,anterior,dif:atual-anterior};
 }
 
-function salvarProduto(){
-  db.produtos.push({
-    nome:nomeProd.value,
-    valor:Number(valorProd.value),
-    tipo:tipoProd.value
-  });
-  save(); render();
+function pdfComparativoMensal(){
+  const {jsPDF}=window.jspdf; const pdf=new jsPDF();
+  const c=compararMeses();
+  pdf.text("COMPARATIVO MENSAL",10,10);
+  pdf.text("Mês atual: R$ "+c.atual.toFixed(2),10,25);
+  pdf.text("Mês anterior: R$ "+c.anterior.toFixed(2),10,35);
+  pdf.text("Diferença: R$ "+c.dif.toFixed(2),10,45);
+  pdf.save("comparativo-mensal.pdf");
 }
 
-function salvarAgenda(){
-  db.agenda.push({
-    data:dataAgenda.value,
-    hora:horaAgenda.value,
-    cliente:clienteAgenda.value,
-    servico:servicoAgenda.value
-  });
-  save(); render();
-}
-
-function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
-function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
-
-function filtrarClientes(txt){
-  cliente.innerHTML=db.clientes.filter(c=>c.nome.toLowerCase().includes(txt.toLowerCase()))
-    .map(c=>`<option>${c.nome}</option>`).join("");
-}
-function filtrarProdutos(txt){
-  produto.innerHTML=db.produtos.filter(p=>p.nome.toLowerCase().includes(txt.toLowerCase()))
-    .map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
-}
-
-function pdfVendas(){
-  const { jsPDF }=window.jspdf;
-  const pdf=new jsPDF();
-  pdf.text("RELATÓRIO DE VENDAS",10,10);
-  let y=20;
-  db.vendas.forEach(v=>{ pdf.text(`${v.data} - R$ ${v.total}`,10,y); y+=7; });
-  pdf.save("vendas.pdf");
-}
-function pdfAgenda(){
-  const { jsPDF }=window.jspdf;
-  const pdf=new jsPDF();
-  pdf.text("AGENDA",10,10);
-  let y=20;
-  db.agenda.forEach(a=>{ pdf.text(`${a.data} ${a.hora} - ${a.cliente}`,10,y); y+=7; });
-  pdf.save("agenda.pdf");
-}
-function pdfHistorico(){ pdfVendas(); }
+function filtrarClientes(t){cliente.innerHTML=db.clientes.filter(c=>c.nome.toLowerCase().includes(t.toLowerCase())).map(c=>`<option>${c.nome}</option>`).join("");}
+function filtrarProdutos(t){produto.innerHTML=db.produtos.filter(p=>p.nome.toLowerCase().includes(t.toLowerCase())).map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");}
 
 render();
 </script>
