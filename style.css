@@ -1,14 +1,12 @@
 body{
   margin:0;
   font-family:Arial, Helvetica, sans-serif;
-  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;
-  background-position:center;
+  background:#111;
 }
-.overlay{background:rgba(0,0,0,.65);min-height:100vh}
+.overlay{background:rgba(0,0,0,.8);min-height:100vh}
 .menu{
   position:fixed;left:0;top:0;bottom:0;width:70px;
-  background:rgba(0,0,0,.35);
+  background:#000;
   display:flex;flex-direction:column;align-items:center;padding-top:20px
 }
 .menu button{
