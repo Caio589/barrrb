@@ -57,7 +57,7 @@
 <h2>Clientes</h2>
 <input id="nomeCliente" placeholder="Nome">
 <select id="planoCliente"></select>
-<button onclick="salvarCliente()">Salvar Cliente</button>
+<button onclick="salvarCliente()">Salvar</button>
 <ul id="listaClientes"></ul>
 </div>
 
@@ -107,9 +107,17 @@
 
 <!-- CAIXA -->
 <div id="caixa" class="section">
-<h2>Fechamento de Caixa</h2>
-<button onclick="fecharCaixa()">📄 Gerar PDF</button>
-<div id="resumoCaixa"></div>
+<h2>Caixa</h2>
+
+<div id="caixaFechado">
+  <input type="number" id="valorAbertura" placeholder="Valor de abertura">
+  <button onclick="abrirCaixa()">Abrir Caixa</button>
+</div>
+
+<div id="caixaAberto" style="display:none">
+  <button onclick="fecharCaixa()">Fechar Caixa (PDF)</button>
+  <div id="resumoCaixa"></div>
+</div>
 </div>
 
 </div>
