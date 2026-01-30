@@ -1,218 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>PDV Barbearia</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>PDV Barbearia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;
-  background-position:center;
-}
-.overlay{background:rgba(0,0,0,.65);min-height:100vh;}
-.menu{
-  position:fixed;left:0;top:0;bottom:0;width:70px;
-  background:rgba(0,0,0,.35);
-  display:flex;flex-direction:column;align-items:center;padding-top:20px;
-}
-.menu button{
-  background:none;border:none;color:#f1c40f;font-size:22px;
-  margin:15px 0;cursor:pointer;
-}
-.content{margin-left:90px;padding:20px;color:#fff;}
-.section{display:none}.section.active{display:block}
-input,select,button{padding:10px;border-radius:6px;border:none;margin:4px 0}
-button{cursor:pointer;font-weight:bold}
-table{width:100%;border-collapse:collapse}
-th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
-.total{font-size:24px;color:#2ecc71;margin-top:10px}
-.search{width:100%}
-</style>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+
 <div class="overlay">
 
-<!-- MENU -->
-<div class="menu">
-  <button onclick="show('pdv')">💈</button>
-  <button onclick="show('clientes')">👤</button>
-  <button onclick="show('planos')">💳</button>
-  <button onclick="show('agenda')">📅</button>
-  <button onclick="show('estoque')">📦</button>
-  <button onclick="show('despesas')">🧾</button>
-  <button onclick="show('historico')">📊</button>
+  <div class="menu">
+    <button onclick="show('pdv')">💈</button>
+    <button onclick="show('clientes')">👤</button>
+    <button onclick="show('agenda')">📅</button>
+  </div>
+
+  <div class="content">
+
+    <!-- PDV -->
+    <div id="pdv" class="section active">
+      <h2>PDV</h2>
+
+      <select id="cliente"></select>
+      <select id="produto"></select>
+      <button onclick="addCarrinho()">Adicionar</button>
+
+      <table id="carrinho"></table>
+      <div class="total">Total: R$ <span id="total">0.00</span></div>
+
+      <select id="pagamento">
+        <option value="">Forma de pagamento</option>
+        <option value="dinheiro">Dinheiro</option>
+        <option value="pix">Pix</option>
+        <option value="cartao">Cartão</option>
+      </select>
+
+      <input type="number" id="valorPago" placeholder="Valor pago (dinheiro)">
+      <div id="troco"></div>
+
+      <button onclick="finalizarVenda()">Finalizar Venda</button>
+
+      <!-- GRÁFICO EM TEMPO REAL -->
+      <canvas id="graficoPDV"></canvas>
+    </div>
+
+    <!-- CLIENTES -->
+    <div id="clientes" class="section">
+      <h2>Clientes</h2>
+      <input id="nomeCliente" placeholder="Nome do cliente">
+      <button onclick="salvarCliente()">Salvar</button>
+      <ul id="listaClientes"></ul>
+    </div>
+
+    <!-- AGENDA -->
+    <div id="agenda" class="section">
+      <h2>Agenda</h2>
+      <input type="date" id="dataAgenda">
+      <input type="time" id="horaAgenda">
+      <input id="clienteAgenda" placeholder="Cliente">
+      <button onclick="salvarAgenda()">Salvar</button>
+      <ul id="listaAgenda"></ul>
+    </div>
+
+  </div>
 </div>
 
-<div class="content">
-
-<!-- PDV -->
-<div id="pdv" class="section active">
-  <h2>PDV</h2>
-  <input class="search" placeholder="🔍 Pesquisar cliente" onkeyup="filtrarClientes(this.value)">
-  <select id="cliente"></select>
-
-  <input class="search" placeholder="🔍 Pesquisar produto/serviço" onkeyup="filtrarProdutos(this.value)">
-  <select id="produto"></select>
-
-  <button onclick="addCarrinho()">Adicionar</button>
-  <table id="carrinho"></table>
-  <div class="total">Total: R$ <span id="total">0.00</span></div>
-
-  <button onclick="finalizarVenda()">Finalizar Venda</button>
-</div>
-
-<!-- CLIENTES -->
-<div id="clientes" class="section">
-  <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome do cliente">
-  <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">Salvar Cliente</button>
-  <ul id="listaClientes"></ul>
-</div>
-
-<!-- PLANOS -->
-<div id="planos" class="section">
-  <h2>Planos</h2>
-  <input id="nomePlano" placeholder="Nome do plano">
-  <input type="number" id="valorPlano" placeholder="Valor mensal">
-  <input type="number" id="qtdPlano" placeholder="Qtd de procedimentos">
-  <input id="tipoPlano" placeholder="Tipo do serviço (ex: Corte)">
-  <button onclick="salvarPlano()">Salvar Plano</button>
-  <ul id="listaPlanos"></ul>
-</div>
-
-<!-- AGENDA -->
-<div id="agenda" class="section">
-  <h2>Agenda</h2>
-  <input type="date" id="dataAgenda">
-  <input type="time" id="horaAgenda">
-  <input id="clienteAgenda" placeholder="Cliente">
-  <input id="servicoAgenda" placeholder="Serviço">
-  <button onclick="salvarAgenda()">Salvar</button>
-  <ul id="listaAgenda"></ul>
-</div>
-
-<!-- ESTOQUE -->
-<div id="estoque" class="section">
-  <h2>Produtos / Serviços</h2>
-  <input id="nomeProd" placeholder="Nome">
-  <input type="number" id="valorProd" placeholder="Valor">
-  <select id="tipoProd">
-    <option value="servico">Serviço</option>
-    <option value="produto">Produto</option>
-  </select>
-  <button onclick="salvarProduto()">Salvar</button>
-  <ul id="listaEstoque"></ul>
-</div>
-
-<!-- DESPESAS -->
-<div id="despesas" class="section">
-  <h2>Despesas</h2>
-  <input id="descDespesa" placeholder="Descrição (Aluguel, Funcionário)">
-  <input type="number" id="valorDespesa" placeholder="Valor">
-  <input type="date" id="dataDespesa">
-  <button onclick="salvarDespesa()">Salvar Despesa</button>
-  <ul id="listaDespesas"></ul>
-</div>
-
-<!-- HISTÓRICO -->
-<div id="historico" class="section">
-  <h2>Financeiro</h2>
-  <button onclick="pdfComparativoMensal()">📊 PDF Comparativo Mensal</button>
-  <ul id="listaHistorico"></ul>
-</div>
-
-</div>
-</div>
-
-<script>
-const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], planos:[], produtos:[], vendas:[], agenda:[], despesas:[]
-};
-let carrinho=[];
-
-function save(){localStorage.setItem("db",JSON.stringify(db));}
-function show(id){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
-
-function render(){
-  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
-  planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
-
-  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} | Plano: ${c.plano||"Nenhum"} | Saldo: ${c.saldoPlano||0}</li>`).join("");
-  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd} ${p.tipo})</li>`).join("");
-  listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
-  listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
-  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.data} - ${d.descricao} R$ ${d.valor}</li>`).join("");
-  listaHistorico.innerHTML=db.vendas.map(v=>`<li>${v.data} - R$ ${v.total}</li>`).join("");
-  carrinhoRender();
-}
-
-function carrinhoRender(){
-  let html="<tr><th>Item</th><th>Valor</th></tr>"; let soma=0;
-  carrinho.forEach(i=>{html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;soma+=i.valor});
-  carrinho.innerHTML=html; document.getElementById("carrinho").innerHTML=html;
-  total.innerText=soma.toFixed(2);
-}
-
-function addCarrinho(){
-  const [nome,valor,tipo]=produto.value.split("|");
-  const cli=db.clientes.find(c=>c.nome===cliente.value);
-  if(cli && cli.plano && tipo==="servico" && cli.saldoPlano>0 && nome.toLowerCase().includes(cli.tipoPlano.toLowerCase())){
-    cli.saldoPlano--; save(); render(); alert("Plano usado. Saldo: "+cli.saldoPlano); return;
-  }
-  carrinho.push({nome,valor:Number(valor)}); carrinhoRender();
-}
-
-function finalizarVenda(){
-  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toISOString(),total:totalVenda});
-  carrinho=[]; save(); render();
-}
-
-function salvarCliente(){
-  const plano=db.planos.find(p=>p.nome===planoCliente.value);
-  db.clientes.push({nome:nomeCliente.value,plano:plano?plano.nome:null,saldoPlano:plano?plano.qtd:0,tipoPlano:plano?plano.tipo:null});
-  save(); render();
-}
-
-function salvarPlano(){db.planos.push({nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value});save();render();}
-function salvarProduto(){db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value});save();render();}
-function salvarAgenda(){db.agenda.push({data:dataAgenda.value,hora:horaAgenda.value,cliente:clienteAgenda.value,servico:servicoAgenda.value});save();render();}
-function salvarDespesa(){db.despesas.push({descricao:descDespesa.value,valor:+valorDespesa.value,data:dataDespesa.value});save();render();}
-
-function compararMeses(){
-  const hoje=new Date(); let atual=0,anterior=0;
-  db.vendas.forEach(v=>{
-    const d=new Date(v.data);
-    if(d.getMonth()===hoje.getMonth()) atual+=v.total;
-    if(d.getMonth()===hoje.getMonth()-1) anterior+=v.total;
-  });
-  return {atual,anterior,dif:atual-anterior};
-}
-
-function pdfComparativoMensal(){
-  const {jsPDF}=window.jspdf; const pdf=new jsPDF();
-  const c=compararMeses();
-  pdf.text("COMPARATIVO MENSAL",10,10);
-  pdf.text("Mês atual: R$ "+c.atual.toFixed(2),10,25);
-  pdf.text("Mês anterior: R$ "+c.anterior.toFixed(2),10,35);
-  pdf.text("Diferença: R$ "+c.dif.toFixed(2),10,45);
-  pdf.save("comparativo-mensal.pdf");
-}
-
-function filtrarClientes(t){cliente.innerHTML=db.clientes.filter(c=>c.nome.toLowerCase().includes(t.toLowerCase())).map(c=>`<option>${c.nome}</option>`).join("");}
-function filtrarProdutos(t){produto.innerHTML=db.produtos.filter(p=>p.nome.toLowerCase().includes(t.toLowerCase())).map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");}
-
-render();
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
