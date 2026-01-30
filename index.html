@@ -21,7 +21,6 @@
   <button onclick="show('estoque')">📦</button>
   <button onclick="show('despesas')">🧾</button>
   <button onclick="show('agenda')">📅</button>
-  <button onclick="show('caixa')">📊</button>
 </div>
 
 <div class="content">
@@ -29,6 +28,19 @@
 <!-- PDV -->
 <div id="pdv" class="section active">
 <h2>PDV</h2>
+
+<!-- CAIXA NO PDV -->
+<div id="controleCaixa">
+  <div id="caixaFechado">
+    <input type="number" id="valorAbertura" placeholder="Valor de abertura do caixa">
+    <button onclick="abrirCaixa()">Abrir Caixa</button>
+  </div>
+
+  <div id="caixaAberto" style="display:none">
+    <b>Caixa aberto</b> | Abertura: R$ <span id="valorAberturaInfo"></span>
+    <button onclick="fecharCaixa()">Fechar Caixa</button>
+  </div>
+</div>
 
 <select id="cliente"></select>
 <select id="produto"></select>
@@ -67,13 +79,13 @@
 <input id="nomePlano" placeholder="Nome do plano">
 <input type="number" id="qtdPlano" placeholder="Qtd serviços">
 <input id="tipoPlano" placeholder="Tipo do serviço">
-<button onclick="salvarPlano()">Salvar Plano</button>
+<button onclick="salvarPlano()">Salvar</button>
 <ul id="listaPlanos"></ul>
 </div>
 
 <!-- ESTOQUE -->
 <div id="estoque" class="section">
-<h2>Produtos / Serviços</h2>
+<h2>Estoque</h2>
 <input id="nomeProd" placeholder="Nome">
 <input type="number" id="valorProd" placeholder="Valor">
 <select id="tipoProd">
@@ -103,21 +115,6 @@
 <input id="servicoAgenda" placeholder="Serviço">
 <button onclick="salvarAgenda()">Salvar</button>
 <ul id="listaAgenda"></ul>
-</div>
-
-<!-- CAIXA -->
-<div id="caixa" class="section">
-<h2>Caixa</h2>
-
-<div id="caixaFechado">
-  <input type="number" id="valorAbertura" placeholder="Valor de abertura">
-  <button onclick="abrirCaixa()">Abrir Caixa</button>
-</div>
-
-<div id="caixaAberto" style="display:none">
-  <button onclick="fecharCaixa()">Fechar Caixa (PDF)</button>
-  <div id="resumoCaixa"></div>
-</div>
 </div>
 
 </div>
